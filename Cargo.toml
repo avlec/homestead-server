@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-tokio = { version = "1.32.0", features = ["full"]}
+tokio = { version = "1.36.0", features = ["full"]}
 driftwood = "0.0.7"
-serde = { version = "1.0.185", features = ["derive"] }
-warp = { version = "0.3.5", features = ["tls"] }
-sqlx = { version = "0.7.1", features = ["runtime-tokio", "tls-native-tls", "sqlite"]}
-askama = { version = "0.12.0", features = ["with-warp"]}
+serde = { version = "1.0.197", features = ["derive"] }
+warp = { version = "0.3.6", features = ["tls"] }
+sqlx = { version = "0.7.3", features = ["runtime-tokio", "tls-native-tls", "sqlite"]}
+askama = { version = "0.12.1", features = ["with-warp"]}
 askama_warp = "0.13.0"
