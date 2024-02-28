@@ -1,0 +1,23 @@
+<table>
+  <thead>
+    <tr>
+      <th>Hardware Address</th>
+      <th>Friendly Name</th>
+      <th>Configuration</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for (id, label) in devices %}
+    <tr>
+      <td>{{ id }}</td>
+      <td>{{ label }}</td>
+      <td>
+        <button hx-get="/v1/config/{{ id }}" hx-trigger="click once" hx-target="next #configuration" _="on click toggle the *display of the next <div/>">
+          Show Config
+        </button>
+        <div style="display: none;" id="configuration"></div>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

@@ -1,0 +1,184 @@
+* API
+** Frontend (user config and monitoring)
+[[http://localhost:1234/config]]
+
+* HTML tests
+** Register device
+POST http://localhost:1234/v1/device
+- Accept: application/json
+- Content-Type: application/json
+#+begin_src json
+{                               //
+    "hwaddr": [2,2,2,4,5,6],
+    "capabilities": {
+        "produces": [
+            "temperature",
+            "humidity"
+        ],
+        "consumes": [
+            "date",
+            "time",
+            "value1",
+            "value2"
+        ]
+    }
+}
+#+end_src
+** Device publish values
+PUT http://localhost:1234/v1/device
+- Accept: application/json
+- Content-Type: application/json
+#+begin_src json
+{
+    "hwaddr": [2,2,2,4,5,6],
+    "resources": [
+        {
+            "what": "temperature",
+            "value": { "real": 22.0 }
+        },
+        {
+            "what": "humidity",
+            "value": { "real": 41.0 }
+        }
+    ]
+}
+#+end_src
+** Device gets
+GET http://localhost:1234/v1/device
+- Accept: application/json
+- Content-Type: application/json
+#+begin_src json
+[2,2,2,4,5,6]
+#+end_src
+* SQLite queries
+** Create DB
+#+begin_src sqlite :db sqlite.db
+drop table if exists devices;
+create table devices (
+id varchar(32) not null primary key,
+label varchar(32));
+
+drop table if exists provisions;
+create table provisions (
+deviceID varchar(32) not null references devices(id),
+what varchar(32) not null,
+val numeric,
+primary key (deviceID, what)
+);
+
+drop table if exists consumptions;
+create table consumptions (
+consumingDeviceID varchar(32) not null references devices(id),
+what varchar(32) not null,
+producingDeviceID varchar(32) references devices(id),
+produces varchar(32),
+primary key (consumingDeviceID, what),
+foreign key (producingDeviceID, produces) references provisions(deviceID, what)
+);
+#+end_src
+
+#+RESULTS:
+
+** Test
+#+begin_src  sqlite :db sqlite.db
+SELECT provisions.what as what, provisions.val as val
+            FROM consumptions
+            JOIN provisions
+            ON consumptions.producingDeviceID = provisions.deviceID
+            AND consumptions.produces = provisions.what
+            AND consumptions.consumingDeviceID = ?
+            AND provisions.val IS NOT NULL;
+#+end_src
+
+#+RESULTS:
+
+** View DB
+#+begin_src sqlite :db sqlite.db
+select * from devices join provisions where devices.id = provisions.deviceID;
+#+end_src
+
+#+RESULTS:
+| 2:2:2:4:5:6 | unconfigured device | 2:2:2:4:5:6 | temperature |  22 |
+| 2:2:2:4:5:6 | unconfigured device | 2:2:2:4:5:6 | humidity    |  41 |
+| c:0:f:f:e:e | fake                | c:0:f:f:e:e | level       | 100 |
+
+#+begin_src sqlite :db sqlite.db
+select * from devices join consumptions where devices.id = consumingDeviceID;
+#+end_src
+
+#+RESULTS:
+|          2:2:2:4:5:6 | unconfigured device |          2:2:2:4:5:6 | date   |             |       |
+|          2:2:2:4:5:6 | unconfigured device |          2:2:2:4:5:6 | time   |             |       |
+|          2:2:2:4:5:6 | unconfigured device |          2:2:2:4:5:6 | value1 | c:0:f:f:e:e | level |
+|          2:2:2:4:5:6 | unconfigured device |          2:2:2:4:5:6 | value2 |             |       |
+| 216:58:221:34:102:18 | unconfigured device | 216:58:221:34:102:18 | top    |             |       |
+| 216:58:221:34:102:18 | unconfigured device | 216:58:221:34:102:18 | middle |             |       |
+| 216:58:221:34:102:18 | unconfigured device | 216:58:221:34:102:18 | bottom |             |       |
+
+
+#+begin_src sqlite :db sqlite.db
+select * from devices join provisions where devices.id = deviceID;
+#+end_src
+
+#+RESULTS:
+| 2:2:2:4:5:6 | unconfigured device | 2:2:2:4:5:6 | temperature |   0 |
+| 2:2:2:4:5:6 | unconfigured device | 2:2:2:4:5:6 | humidity    |   0 |
+| c:0:f:f:e:e | fake                | c:0:f:f:e:e | level       | 100 |
+
+** Isolated Provisions and register with unconfigured device
+
+#+begin_src sqlite :db sqlite.db
+insert into devices (id, label) values ('c:0:f:f:e:e', 'fake');
+insert into provisions (deviceID, what, val) values ('c:0:f:f:e:e', 'level', 100.0);
+update consumptions set producingDeviceID = 'c:0:f:f:e:e', produces = 'level' where consumingDeviceID = '2:2:2:4:5:6' and what = 'value1'
+#+end_src
+
+#+RESULTS:
+
+** Test get values device consumes
+
+#+begin_src sqlite :db sqlite.db
+SELECT consumptions.what, provisions.val
+            FROM consumptions
+            JOIN provisions
+            ON consumptions.producingDeviceID = provisions.deviceID
+            AND consumptions.produces = provisions.what
+            AND consumptions.consumingDeviceID = '2:2:2:4:5:6'
+            AND provisions.val IS NOT NULL;
+#+end_src
+
+#+RESULTS:
+| value1 | 100 |
+
+** Test data add
+#+begin_src sqlite :db sqlite.db
+insert into devices (id, label)
+
+#+end_src
+** Test configuring device.
+
+#+begin_src sqlite :db sqlite.db
+update consumptions set producingDeviceID = 'c:0:f:f:e:e', produces = 'level' where consumingDeviceID = '216:58:221:34:102:18' and what = 'top';
+update consumptions set producingDeviceID = '2:2:2:4:5:6', produces = 'humidity' where consumingDeviceID = '216:58:221:34:102:18' and what = 'middle';
+update consumptions set producingDeviceID = '2:2:2:4:5:6', produces = 'temperature' where consumingDeviceID = '216:58:221:34:102:18' and what = 'bottom';
+#+end_src
+
+#+RESULTS:
+
+* Ideas
+#+begin_src html
+<select>
+    <optgroup label="TestGroup">
+        <option value="test">Test</option>
+        <option value="test1">Test1</option>
+        <option value="test2">Test2</option>
+    </optgroup>
+    <optgroup label="bestGroup">
+        <option value="best">Best</option>
+        <option value="best1">Best1</option>
+        <option value="best2">Best2</option>
+    </optgroup>
+    <!-- optgroup for each device -->
+    <!-- option for each device's produced item -->
+</select>
+#+end_src

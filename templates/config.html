@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Device Config{% endblock %}
+
+{% block head %}
+<style>
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Device Config</h1>
+<div hx-get="/v1/config" hx-trigger="load"> <!-- add this back in with a auto-reload blocker ", every 30s"  -->
+  <h2>Loading devices...</h2>
+</div>
+{% call super() %}
+{% endblock %}
